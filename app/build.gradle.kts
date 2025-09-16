@@ -1,0 +1,160 @@
+/*
+ * Copyright 2022 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import com.google.samples.apps.nowinandroid.NiaBuildType
+
+plugins {
+    alias(libs.plugins.nowinandroid.android.application)
+    alias(libs.plugins.nowinandroid.android.application.compose)
+    alias(libs.plugins.nowinandroid.android.application.flavors)
+    alias(libs.plugins.nowinandroid.android.application.jacoco)
+//    alias(libs.plugins.nowinandroid.android.application.firebase)
+    id("com.google.android.gms.oss-licenses-plugin")
+    alias(libs.plugins.baselineprofile)
+    alias(libs.plugins.roborazzi)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotzilla)
+}
+
+android {
+    defaultConfig {
+        applicationId = "com.google.samples.apps.nowinandroid"
+        versionCode = 8
+        versionName = "0.1.0-workshop" // X.Y.Z; X = Major, Y = minor, Z = Patch level
+
+        // Custom test runner to set up Hilt dependency graph
+        testInstrumentationRunner = "com.google.samples.apps.nowinandroid.core.testing.NiaTestRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+    }
+    buildFeatures {
+        buildConfig = true
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = NiaBuildType.DEBUG.applicationIdSuffix
+        }
+        release {
+            isMinifyEnabled = true
+            applicationIdSuffix = NiaBuildType.RELEASE.applicationIdSuffix
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+            // To publish on the Play store a private signing key is required, but to allow anyone
+            // who clones the code to sign and run the release variant, use the debug signing key.
+            // TODO: Abstract the signing configuration to a separate file to avoid hardcoding this.
+            signingConfig = signingConfigs.named("debug").get()
+            // Ensure Baseline Profile is fresh for release builds.
+            baselineProfile.automaticGenerationDuringBuild = true
+        }
+    }
+
+    packaging {
+        resources {
+            excludes.add("/META-INF/{AL2.0,LGPL2.1}")
+        }
+    }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+    namespace = "com.google.samples.apps.nowinandroid"
+}
+
+dependencies {
+    implementation(projects.feature.interests)
+    implementation(projects.feature.foryou)
+    implementation(projects.feature.bookmarks)
+    implementation(projects.feature.topic)
+    implementation(projects.feature.search)
+    implementation(projects.feature.settings)
+
+    implementation(projects.core.common)
+    implementation(projects.core.ui)
+    implementation(projects.core.designsystem)
+    implementation(projects.core.data)
+    implementation(projects.core.model)
+    implementation(projects.core.analytics)
+    implementation(projects.sync.work)
+
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.material3.adaptive)
+    implementation(libs.androidx.compose.material3.adaptive.layout)
+    implementation(libs.androidx.compose.material3.adaptive.navigation)
+    implementation(libs.androidx.compose.material3.windowSizeClass)
+    implementation(libs.androidx.compose.runtime.tracing)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
+//    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtimeCompose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.profileinstaller)
+    implementation(libs.androidx.tracing.ktx)
+    implementation(libs.androidx.window.core)
+    implementation(libs.kotlinx.coroutines.guava)
+    implementation(libs.coil.kt)
+    implementation(libs.kotlinx.serialization.json)
+
+//    ksp(libs.hilt.compiler)
+
+    debugImplementation(libs.androidx.compose.ui.testManifest)
+    testImplementation(libs.kotlin.test)
+
+    testDemoImplementation(libs.robolectric)
+    testDemoImplementation(libs.roborazzi)
+
+    androidTestImplementation(kotlin("test"))
+//    androidTestImplementation(projects.core.testing)
+//    androidTestImplementation(projects.core.dataTest)
+//    androidTestImplementation(projects.core.datastoreTest)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.navigation.testing)
+    androidTestImplementation(libs.androidx.compose.ui.test)
+//    androidTestImplementation(libs.hilt.android.testing)
+
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.androidx.workmanager)
+    testImplementation(libs.koin.android.test)
+
+    baselineProfile(projects.benchmarks)
+
+    implementation(libs.kotzilla.sdk.compose)
+
+    //firebase
+    //https://console.firebase.google.com/u/0/project/nowinandroid-koin/crashlytics/app/android:com.google.samples.apps.nowinandroid.demo.debug/issues?state=open&time=last-seven-days&types=crash&tag=all&sort=eventCount
+    implementation(platform("com.google.firebase:firebase-bom:34.1.0"))
+    implementation("com.google.firebase:firebase-analytics")
+}
+
+baselineProfile {
+    // Don't build on every iteration of a full assemble.
+    // Instead enable generation directly for the release build variant.
+    automaticGenerationDuringBuild = false
+
+    // Make use of Dex Layout Optimizations via Startup Profiles
+    dexLayoutOptimization = true
+}
+
+dependencyGuard {
+    configuration("prodReleaseRuntimeClasspath")
+}
+
+kotzilla {
+    // Compose Navigation
+    composeInstrumentation = true
+}
